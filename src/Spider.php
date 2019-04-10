@@ -31,6 +31,11 @@ class Spider
 
             $response = Request::get($url, [], $options);
 
+            $data = [
+                'statusCode' => $response->getHttpCode(),
+                'status' => $response->getHeader()->getStatus()
+            ];
+
             if ($response->getHttpCode() === 200)
             {
                 $body = $response->getBody();
@@ -43,9 +48,12 @@ class Spider
 
                 self::$lastUrl = $response->getLastUrl();
 
-                return self::parse($body, $url);
+                return array_merge($data, self::parse($body, $url));
+            } else {
+                $data['url'] = $url;
+                return $data;
             }
-
+            
             $error = 'Requested page could not be retrieved. Received http code: ' . $response->getHttpCode();
             $code = SpiderException::HTTP_ERROR_CODE;
         }
@@ -294,7 +302,7 @@ class Spider
         {
             $tagLabel = strtolower($tagLabel);
 
-            if ($matchedTags = self::regexMany($html, '/<\s*' . $tag . '\s*>(.*?)<\s*\/\s*' . $tag . '\s*>/ui'))
+            if ($matchedTags = self::regexMany($html, '/<\s*' . $tag . '\s*>(.*?)<\s*\/\s*' . $tag . '\s*>/uis'))
             {
                 foreach ($matchedTags as $matched)
                 {
@@ -309,7 +317,7 @@ class Spider
                         continue;
                     }
 
-                    $data[$tagLabel] = $matched[1];
+                    $data[$tagLabel] = preg_replace('/\s+/', ' ', trim($matched[1]));
                 }
             }
         }
